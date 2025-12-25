@@ -11,6 +11,7 @@ var emerCheckbox = document.getElementById("eme-check");
 var saveBtn = document.getElementById("savebtn");
 var updateBtn = document.getElementById("updateBtn");
 var contactsCards = document.getElementById("contacts-cards");
+var searchInput = document.getElementById("searchInput");
 var nameRegex = /^[A-Za-z\s]{2,50}$/;
 var phoneRegex = /^(?:\+20|0)?1[0125][0-9]{8}$/;
 var emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -47,29 +48,13 @@ function addContact() {
         return;
     }
 
-    var createContact = (imageSrc) => {
-        var newContact = {
-            id: Date.now(),
-            name: contactName.value,
-            phone: phoneNumber.value,
-            email: contactEmail.value,
-            address: addressInput.value,
-            group: selectgroup.selectedOptions[0].innerText,
-            note: noteInput.value,
-            isFavorite: favCheckbox.checked,
-            isEmergency: emerCheckbox.checked,
-            image: imageSrc || "./images/default.png",
-        };
-        allContacts.push(newContact);
-        saveContacts();
-        renderContacts();
-        clearForm();
-    };
-
+  
     if (imageInput.files[0]) {
         var reader = new FileReader();
         reader.readAsDataURL(imageInput.files[0]);
-        reader.onload = () => createContact(reader.result);
+          reader.onload = function () {
+                createContact(reader.result);
+            };
     } else {
         createContact();
     }
@@ -89,6 +74,28 @@ function addContact() {
 
 }
 
+function createContact(imageSrc) {
+    var newContact = {
+        id: Date.now(),
+        name: contactName.value,
+        phone: phoneNumber.value,
+        email: contactEmail.value,
+        address: addressInput.value,
+        group: selectgroup.selectedOptions[0].innerText,
+        note: noteInput.value,
+        isFavorite: favCheckbox.checked,
+        isEmergency: emerCheckbox.checked,
+        image: imageSrc || "./images/default.png"
+    };
+
+    allContacts.push(newContact);
+    saveContacts();
+    renderContacts();
+    clearForm();
+}
+
+
+
 function renderContacts() {
     contactsCards.innerHTML = "";
 
@@ -104,10 +111,13 @@ function renderContacts() {
         return;
     }
 
-    allContacts.forEach(contact => {
-        var cardHTML = getContactCardHTML(contact);
+
+    for (var i = 0; i < allContacts.length; i++) {
+        var cardHTML = getContactCardHTML(allContacts[i]);
         contactsCards.insertAdjacentHTML("beforeend", cardHTML);
-    });
+     }
+
+
     document.getElementById(`tot-count`).innerText = allContacts.length;
     document.getElementById(`tot-count2`).innerText = allContacts.length;
 
@@ -319,11 +329,11 @@ function updateContact() {
     if (imageInput.files[0]) {
         var reader = new FileReader();
         reader.readAsDataURL(imageInput.files[0]);
-        reader.onload = () => {
+       reader.onload = function () {
             contactToUpdate.image = reader.result;
             saveContacts();
             renderContacts();
-        };
+        }; 
     } else {
         saveContacts();
         renderContacts();
@@ -359,13 +369,15 @@ function deleteContact(id) {
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Delete"
-    }).then(res => {
+    }).then(function (res) {
         if (res.isConfirmed) {
-            allContacts = allContacts.filter(c => c.id !== id);
+            allContacts = allContacts.filter(function (c) {
+                return c.id !== id;
+            });
             saveContacts();
             renderContacts();
         }
-    });
+});
 
 }
 
@@ -428,9 +440,60 @@ function validateInput(element, regex, errorId) {
     }
 }
 
+contactName.addEventListener("input", function () {
+  validateInput(contactName, nameRegex, "contactNameError");
+});
+
+phoneNumber.addEventListener("input", function () {
+  validateInput(phoneNumber, phoneRegex, "contactPhoneError");
+});
+
+contactEmail.addEventListener("input", function () {
+  validateInput(contactEmail, emailRegex, "contactEmailError");
+});
+
+searchInput.addEventListener("input", searchContacts);
+
+function searchContacts(e) {
+  var searchText = e.target.value.trim().toLowerCase();
+  if (searchText === "") {
+    renderContacts();
+    return;
+  }
+
+  var filteredContacts = allContacts.filter(function (contact) {
+    return (
+      contact.name.toLowerCase().includes(searchText) ||
+      contact.phone.includes(searchText) ||
+      contact.email.toLowerCase().includes(searchText)
+    );
+  });
+
+  renderFilteredContacts(filteredContacts);
+}
+
+function renderFilteredContacts(list) {
+  contactsCards.innerHTML = "";
+
+  if (list.length === 0) {
+    contactsCards.innerHTML = `
+      <div class="text-center py-5 w-100">
+        <div class="mx-auto mb-4 d-flex align-items-center justify-content-center add-icon">
+          <i class="fa-solid fa-address-book fs-2"></i>
+        </div>
+         <p class="grayed fw-semibold">No contacts found</p>
+            <p class="grayed mt-1">Click "Add Contact" to begin</p>
+      </div>
+    `;
+   
+    return;
+  }
 
 
+    for (var i = 0; i < list.length; i++) {
+        var cardHTML = getContactCardHTML(list[i]);
+        contactsCards.insertAdjacentHTML("beforeend", cardHTML);
+     }
 
-contactName.addEventListener("input", () => validateInput(contactName, nameRegex, "contactNameError"));
-phoneNumber.addEventListener("input", () => validateInput(phoneNumber, phoneRegex, "contactPhoneError"));
-contactEmail.addEventListener("input", () => validateInput(contactEmail, emailRegex, "contactEmailError")); 
+}
+
